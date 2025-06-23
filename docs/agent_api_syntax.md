@@ -16,32 +16,15 @@ Authorization: Bearer <your_jwt_token>
 
 ```bash
 # Full example with all fields
-curl -X POST "http://localhost:8000/api/v1/agents/" \
-  -H "Authorization: Bearer <your_jwt_token>" \
+curl -X POST "http://localhost:8080/api/v1/agents/" \
+  -H "Authorization: Bearer $API_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{
-    "name": "Sales Agent",
-    "prompt": "You are a professional sales agent. Be friendly and helpful.",
-    "welcome_message": "Hello! How can I help you today?",
-    "voice_id": "11111111-1111-1111-1111-111111111111",
-    "variables": {
-      "company_name": "{{company_name}}",
-      "product": "{{product}}"
-    },
-    "functions": ["transfer_call", "end_call"],
-    "inbound_phone": "+1234567890",
-    "outbound_phone": "+0987654321",
-    "max_attempts": 3,
-    "retry_delay_minutes": 60,
-    "business_hours_start": "09:00",
-    "business_hours_end": "18:00",
-    "timezone": "America/New_York",
-    "max_call_duration_minutes": 30
-  }'
+  -d "{\"name\":\"Sales Agent\",\"prompt\":\"You are a professional sales agent. Be friendly and helpful.\",\"welcome_message\":\"Hello! How can I help you today?\",\"voice_id\":\"11111111-1111-1111-1111-111111111111\",\"variables\":{\"company_name\":\"{{company_name}}\",\"product\":\"{{product}}\"},\"functions\":[\"transfer_call\",\"end_call\"],\"inbound_phone\":\"+1234567890\",\"outbound_phone\":\"+0987654321\",\"max_attempts\":3,\"retry_delay_minutes\":60,\"business_hours_start\":\"09:00\",\"business_hours_end\":\"18:00\",\"timezone\":\"America/New_York\",\"max_call_duration_minutes\":30}"
+
 
 # Minimal example (only required fields)
-curl -X POST "http://localhost:8000/api/v1/agents/" \
-  -H "Authorization: Bearer <your_jwt_token>" \
+curl -X POST "http://localhost:8080/api/v1/agents/" \
+  -H "Authorization: Bearer $API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Simple Agent",
@@ -88,8 +71,8 @@ curl -X POST "http://localhost:8000/api/v1/agents/" \
 
 ```bash
 # List all agents
-curl -X GET "http://localhost:8000/api/v1/agents/" \
-  -H "Authorization: Bearer <your_jwt_token>"
+curl -X GET "http://localhost:8080/api/v1/agents/" \
+  -H "Authorization: Bearer $API_TOKEN"
 
 # With pagination
 curl -X GET "http://localhost:8000/api/v1/agents/?page=2&per_page=20" \
@@ -124,8 +107,8 @@ curl -X GET "http://localhost:8000/api/v1/agents/?status_filter=active" \
 **GET** `/agents/{agent_id}`
 
 ```bash
-curl -X GET "http://localhost:8000/api/v1/agents/123e4567-e89b-12d3-a456-426614174000" \
-  -H "Authorization: Bearer <your_jwt_token>"
+curl -X GET "http://localhost:8080/api/v1/agents/fe3e7b28-a9d5-4967-a78c-1e18bad870c4" \
+  -H "Authorization: Bearer $API_TOKEN"
 ```
 
 ### Response
@@ -135,8 +118,8 @@ Same as Create Agent response
 **PUT** `/agents/{agent_id}`
 
 ```bash
-curl -X PUT "http://localhost:8000/api/v1/agents/123e4567-e89b-12d3-a456-426614174000" \
-  -H "Authorization: Bearer <your_jwt_token>" \
+curl -X PUT "http://localhost:8080/api/v1/agents/fe3e7b28-a9d5-4967-a78c-1e18bad870c4" \
+  -H "Authorization: Bearer $API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Updated Sales Agent",
@@ -176,8 +159,8 @@ Same as Create Agent response
 Toggles between "active" and "inactive" status.
 
 ```bash
-curl -X PATCH "http://localhost:8000/api/v1/agents/123e4567-e89b-12d3-a456-426614174000/status" \
-  -H "Authorization: Bearer <your_jwt_token>"
+curl -X PATCH "http://localhost:8080/api/v1/agents/fe3e7b28-a9d5-4967-a78c-1e18bad870c4/status" \
+  -H "Authorization: Bearer $API_TOKEN"
 ```
 
 ### Response
@@ -193,8 +176,8 @@ curl -X PATCH "http://localhost:8000/api/v1/agents/123e4567-e89b-12d3-a456-42661
 Soft deletes the agent (marks as deleted but keeps in database).
 
 ```bash
-curl -X DELETE "http://localhost:8000/api/v1/agents/123e4567-e89b-12d3-a456-426614174000" \
-  -H "Authorization: Bearer <your_jwt_token>"
+curl -X DELETE "http://localhost:8080/api/v1/agents/fe3e7b28-a9d5-4967-a78c-1e18bad870c4" \
+  -H "Authorization: Bearer $API_TOKEN"
 ```
 
 ### Response
@@ -210,8 +193,8 @@ curl -X DELETE "http://localhost:8000/api/v1/agents/123e4567-e89b-12d3-a456-4266
 Get all available voices for agents.
 
 ```bash
-curl -X GET "http://localhost:8000/api/v1/agents/voices/" \
-  -H "Authorization: Bearer <your_jwt_token>"
+curl -X GET "http://localhost:8080/api/v1/agents/voices/" \
+  -H "Authorization: Bearer $API_TOKEN"
 ```
 
 ### Response
