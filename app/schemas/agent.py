@@ -61,6 +61,10 @@ class AgentResponse(BaseModel):
     created_at: Union[str, datetime]
     updated_at: Union[str, datetime]
     
+    # Computed fields for dashboard display
+    phone_numbers_configured: bool = False
+    phone_status: str = "not_configured"  # not_configured, partial, complete
+    
     @field_validator('id', 'company_id', 'voice_id', mode='before')
     @classmethod
     def convert_uuid_to_str(cls, v):

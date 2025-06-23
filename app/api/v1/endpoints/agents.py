@@ -136,8 +136,29 @@ async def list_agents(
     total = query.count()
     agents = query.offset((page - 1) * per_page).limit(per_page).all()
     
+    # Add phone status to each agent
+    agent_responses = []
+    for agent in agents:
+        agent_dict = agent.__dict__.copy()
+        
+        # Compute phone status
+        has_inbound = bool(agent.inbound_phone)
+        has_outbound = bool(agent.outbound_phone)
+        
+        if has_inbound and has_outbound:
+            agent_dict['phone_status'] = 'complete'
+            agent_dict['phone_numbers_configured'] = True
+        elif has_inbound or has_outbound:
+            agent_dict['phone_status'] = 'partial'
+            agent_dict['phone_numbers_configured'] = True
+        else:
+            agent_dict['phone_status'] = 'not_configured'
+            agent_dict['phone_numbers_configured'] = False
+        
+        agent_responses.append(agent_dict)
+    
     return AgentListResponse(
-        agents=agents,
+        agents=agent_responses,
         total=total,
         page=page,
         per_page=per_page

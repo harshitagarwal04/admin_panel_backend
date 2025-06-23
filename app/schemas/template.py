@@ -1,9 +1,10 @@
-from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
+from pydantic import BaseModel, field_validator
+from typing import List, Dict, Any, Optional, Union
+import uuid
 
 
 class TemplateResponse(BaseModel):
-    id: str
+    id: Union[str, uuid.UUID]
     industry: str
     use_case: str
     name: str
@@ -12,6 +13,13 @@ class TemplateResponse(BaseModel):
     functions: List[str]
     welcome_message: Optional[str]
     suggested_settings: Dict[str, Any]
+    
+    @field_validator('id', mode='before')
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        if isinstance(v, uuid.UUID):
+            return str(v)
+        return v
     
     class Config:
         from_attributes = True
