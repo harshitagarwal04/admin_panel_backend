@@ -1,12 +1,13 @@
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, field_validator
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
+import uuid
 
 
 class InteractionAttemptResponse(BaseModel):
-    id: str
-    lead_id: str
-    agent_id: str
+    id: Union[str, uuid.UUID]
+    lead_id: Union[str, uuid.UUID]
+    agent_id: Union[str, uuid.UUID]
     attempt_number: int
     status: Optional[str]
     outcome: Optional[str]
@@ -14,13 +15,27 @@ class InteractionAttemptResponse(BaseModel):
     duration_seconds: Optional[int]
     transcript_url: Optional[str]
     retell_call_id: Optional[str]
-    created_at: datetime
-    updated_at: datetime
+    created_at: Union[str, datetime]
+    updated_at: Union[str, datetime]
     
     # Related data
     lead_name: Optional[str]
     lead_phone: Optional[str]
     agent_name: Optional[str]
+    
+    @field_validator('id', 'lead_id', 'agent_id', mode='before')
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        if isinstance(v, uuid.UUID):
+            return str(v)
+        return v
+    
+    @field_validator('created_at', 'updated_at', mode='before')
+    @classmethod
+    def convert_datetime_to_str(cls, v):
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return v
     
     class Config:
         from_attributes = True

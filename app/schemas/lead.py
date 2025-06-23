@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field, validator
-from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field, validator, field_validator
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 import re
+import uuid
 
 
 class LeadCreate(BaseModel):
@@ -35,17 +36,31 @@ class LeadUpdate(BaseModel):
 
 
 class LeadResponse(BaseModel):
-    id: str
-    agent_id: str
+    id: Union[str, uuid.UUID]
+    agent_id: Union[str, uuid.UUID]
     first_name: str
     phone_e164: str
     status: str
     custom_fields: Dict[str, Any]
-    schedule_at: datetime
+    schedule_at: Union[str, datetime]
     attempts_count: int
     disposition: Optional[str]
-    created_at: datetime
-    updated_at: datetime
+    created_at: Union[str, datetime]
+    updated_at: Union[str, datetime]
+    
+    @field_validator('id', 'agent_id', mode='before')
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        if isinstance(v, uuid.UUID):
+            return str(v)
+        return v
+    
+    @field_validator('schedule_at', 'created_at', 'updated_at', mode='before')
+    @classmethod
+    def convert_datetime_to_str(cls, v):
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return v
     
     class Config:
         from_attributes = True

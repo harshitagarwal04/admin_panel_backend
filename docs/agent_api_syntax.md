@@ -309,10 +309,15 @@ curl -X GET "http://localhost:8000/api/v1/agents/" \
 
 ## Available Voice IDs (after seeding)
 
-| Voice ID | Name | Gender | Language |
-|----------|------|--------|----------|
-| 11111111-1111-1111-1111-111111111111 | Sarah - American | female | en-US |
-| 22222222-2222-2222-2222-222222222222 | John - American | male | en-US |
-| 33333333-3333-3333-3333-333333333333 | Emma - British | female | en-GB |
-| 44444444-4444-4444-4444-444444444444 | David - British | male | en-GB |
-| 55555555-5555-5555-5555-555555555555 | Maria - Spanish | female | es-ES |
+**Note**: You can use either our database UUIDs or direct Retell voice IDs. Our system automatically maps UUIDs to the correct Retell voice IDs.
+
+| Voice ID (UUID) | Name | Maps to Retell ID | Language |
+|-----------------|------|--------------------|----------|
+| 11111111-1111-1111-1111-111111111111 | Sarah - American | 11labs-Adrian | en-US |
+| 22222222-2222-2222-2222-222222222222 | John - American | 11labs-Adrian | en-US |
+| 33333333-3333-3333-3333-333333333333 | Emma - British | 11labs-Adrian | en-GB |
+| 44444444-4444-4444-4444-444444444444 | David - British | 11labs-Adrian | en-GB |
+| 55555555-5555-5555-5555-555555555555 | Maria - Spanish | 11labs-Adrian | es-ES |
+
+**Direct Retell Voice IDs** (can be used directly):
+- `11labs-Adrian` - Professional male voice (recommended)

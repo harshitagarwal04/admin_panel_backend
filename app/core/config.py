@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     
     # Retell AI
     RETELL_API_KEY: str = os.getenv("RETELL_API_KEY", "")
+    RETELL_WEBHOOK_SECRET: str = os.getenv("RETELL_WEBHOOK_SECRET", "")
+    RETELL_LLM_ID: str = os.getenv("RETELL_LLM_ID", "retell-provided-llm-id")
+    WEBHOOK_URL: str = os.getenv("WEBHOOK_URL", "https://your-domain.com/api/v1/calls/webhook")
     
     # Twilio
     TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "")
