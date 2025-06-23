@@ -1,8 +1,14 @@
 from typing import Dict, Any, Optional, List
 from retell import Retell
 from app.core.config import settings
+from app.core.retell_template import (
+    MASTER_AGENT_CONFIG, 
+    build_dynamic_variables, 
+    get_voice_id_for_agent
+)
 import logging
 from datetime import datetime
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -10,147 +16,84 @@ logger = logging.getLogger(__name__)
 class RetellService:
     def __init__(self):
         self.api_key = getattr(settings, 'RETELL_API_KEY', None)
+        self.master_agent_id = None  # Will be set after creating master template
         
         if self.api_key and self.api_key != "your-retell-api-key-here":
             self.enabled = True
             self.client = Retell(api_key=self.api_key)
+            # Initialize master template agent on first use
+            self._initialize_master_agent()
         else:
             logger.warning("Retell API key not configured - running in mock mode")
             self.enabled = False
             self.client = None
     
-    def create_agent(self, agent_data: Dict[str, Any]) -> Optional[str]:
-        """Create an agent in Retell and return the agent ID"""
-        if not self.enabled:
-            return f"mock_agent_{agent_data['name'][:10]}"
-        
+    def _initialize_master_agent(self):
+        """Initialize the master template agent if it doesn't exist"""
         try:
-            # Get a sample response engine from existing agents
+            # Check if we have the master agent ID stored somewhere
+            # For now, we'll create one if it doesn't exist
+            if not self.master_agent_id:
+                self.master_agent_id = self._create_or_get_master_agent()
+        except Exception as e:
+            logger.error(f"Failed to initialize master agent: {e}")
+            # Fall back to legacy mode if template creation fails
+            self.master_agent_id = None
+    
+    def _create_or_get_master_agent(self) -> str:
+        """Create or retrieve the master template agent"""
+        try:
+            # List existing agents to see if we have a master template
             existing_agents = self.client.agent.list()
-            if not existing_agents:
-                raise Exception("No existing agents found to copy response_engine from")
             
-            sample_response_engine = existing_agents[0].response_engine
+            # Look for existing master template agent
+            for agent in existing_agents:
+                if agent.agent_name == "Universal AI Assistant":
+                    logger.info(f"Found existing master template agent: {agent.agent_id}")
+                    return agent.agent_id
             
-            # Resolve voice_id - if it's a UUID from our database, get the provider ID
-            voice_id = agent_data.get("voice_id", "11labs-Adrian")
-            if voice_id and len(voice_id) == 36 and voice_id.count('-') == 4:  # Looks like UUID
-                # Get the voice from our database to find the provider ID
-                from app.db.session import SessionLocal
-                from app.models.voice import Voice
-                
-                db = SessionLocal()
-                try:
-                    voice = db.query(Voice).filter(Voice.id == voice_id).first()
-                    if voice and voice.voice_provider_id:
-                        voice_id = voice.voice_provider_id
-                        logger.info(f"Mapped voice UUID {agent_data.get('voice_id')} to provider ID {voice_id}")
-                    else:
-                        logger.warning(f"Voice UUID {agent_data.get('voice_id')} not found, using default")
-                        voice_id = "11labs-Adrian"
-                finally:
-                    db.close()
-            
-            # Build create kwargs based on what's provided
-            create_kwargs = {
-                "agent_name": agent_data["name"],
-                "voice_id": voice_id,
-                "response_engine": sample_response_engine,  # Use existing response engine
-                "language": "en-US"
-            }
-            
-            # Add optional parameters if specified
-            if "enable_backchannel" in agent_data:
-                create_kwargs["enable_backchannel"] = agent_data["enable_backchannel"]
-            if "responsiveness" in agent_data:
-                create_kwargs["responsiveness"] = agent_data["responsiveness"]
-            if "voice_temperature" in agent_data:
-                create_kwargs["voice_temperature"] = agent_data["voice_temperature"]
-            if "voice_speed" in agent_data:
-                create_kwargs["voice_speed"] = agent_data["voice_speed"]
-            
-            # Add webhook URL if configured
-            if hasattr(settings, 'WEBHOOK_URL') and settings.WEBHOOK_URL:
-                create_kwargs["webhook_url"] = settings.WEBHOOK_URL
-            
-            # Create agent using SDK
-            response = self.client.agent.create(**create_kwargs)
-            
-            logger.info(f"Successfully created agent: {response.agent_id}")
+            # Create new master template agent
+            logger.info("Creating new master template agent")
+            response = self.client.agent.create(**MASTER_AGENT_CONFIG)
+            logger.info(f"Created master template agent: {response.agent_id}")
             return response.agent_id
             
         except Exception as e:
-            logger.error(f"Error creating agent via SDK: {e}")
-            # Log more details about the error
-            if hasattr(e, 'response'):
-                logger.error(f"Response details: {getattr(e.response, 'text', 'No response text')}")
-            return None
+            logger.error(f"Error creating master template agent: {e}")
+            raise
+    
+    def create_agent(self, agent_data: Dict[str, Any]) -> Optional[str]:
+        """
+        LEGACY METHOD - Template-based approach doesn't create individual agents.
+        Returns master agent ID for backward compatibility.
+        """
+        if not self.enabled:
+            return f"mock_agent_{agent_data['name'][:10]}"
+        
+        logger.info(f"Template-based mode: Agent '{agent_data['name']}' will use master template")
+        return self.master_agent_id or "master_template_agent"
     
     def update_agent(self, retell_agent_id: str, agent_data: Dict[str, Any]) -> bool:
-        """Update an agent in Retell"""
+        """
+        LEGACY METHOD - Template-based approach doesn't update individual agents.
+        Agent changes are applied per-call via dynamic variables.
+        """
         if not self.enabled:
             return True
         
-        try:
-            # Build update kwargs with only provided fields
-            update_kwargs = {}
-            if "name" in agent_data:
-                update_kwargs["agent_name"] = agent_data["name"]
-            if "voice_id" in agent_data:
-                voice_id = agent_data["voice_id"]
-                # Resolve voice_id if it's a UUID from our database
-                if voice_id and len(voice_id) == 36 and voice_id.count('-') == 4:  # Looks like UUID
-                    from app.db.session import SessionLocal
-                    from app.models.voice import Voice
-                    
-                    db = SessionLocal()
-                    try:
-                        voice = db.query(Voice).filter(Voice.id == voice_id).first()
-                        if voice and voice.voice_provider_id:
-                            voice_id = voice.voice_provider_id
-                            logger.info(f"Mapped voice UUID {agent_data['voice_id']} to provider ID {voice_id}")
-                        else:
-                            logger.warning(f"Voice UUID {agent_data['voice_id']} not found, using default")
-                            voice_id = "11labs-Adrian"
-                    finally:
-                        db.close()
-                
-                update_kwargs["voice_id"] = voice_id
-            if "voice_temperature" in agent_data:
-                update_kwargs["voice_temperature"] = agent_data["voice_temperature"]
-            if "voice_speed" in agent_data:
-                update_kwargs["voice_speed"] = agent_data["voice_speed"]
-            
-            logger.info(f"Updating agent {retell_agent_id} with kwargs: {update_kwargs}")
-            
-            self.client.agent.update(
-                agent_id=retell_agent_id,
-                **update_kwargs
-            )
-            logger.info(f"Successfully updated agent: {retell_agent_id}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error updating agent via SDK: {e}")
-            # Log more details about the error
-            if hasattr(e, 'response'):
-                logger.error(f"Response details: {getattr(e.response, 'text', 'No response text')}")
-            if hasattr(e, 'status_code'):
-                logger.error(f"Status code: {e.status_code}")
-            return False
+        logger.info(f"Template-based mode: Agent updates applied via dynamic variables per call")
+        return True
     
     def delete_agent(self, retell_agent_id: str) -> bool:
-        """Delete an agent from Retell"""
+        """
+        LEGACY METHOD - Template-based approach doesn't delete individual agents.
+        Only the master template agent exists in Retell.
+        """
         if not self.enabled:
             return True
         
-        try:
-            self.client.agent.delete(agent_id=retell_agent_id)
-            logger.info(f"Successfully deleted agent: {retell_agent_id}")
-            return True
-        except Exception as e:
-            logger.error(f"Error deleting agent via SDK: {e}")
-            return False
+        logger.info(f"Template-based mode: No individual agents to delete")
+        return True
     
     def get_agent(self, retell_agent_id: str) -> Optional[Dict]:
         """Get agent details from Retell"""
@@ -191,6 +134,87 @@ class RetellService:
         except Exception as e:
             logger.error(f"Error listing agents via SDK: {e}")
             return []
+    
+    def create_template_call(self, agent_config: dict, lead_data: dict, call_context: dict = None) -> Optional[str]:
+        """Create a phone call using the template-based approach"""
+        if not self.enabled:
+            return f"mock_call_{lead_data.get('phone', 'unknown')[-4:]}"
+        
+        if not self.master_agent_id:
+            logger.error("Master template agent not initialized")
+            return None
+        
+        try:
+            # Build dynamic variables for this specific call
+            dynamic_vars = build_dynamic_variables(agent_config, lead_data, call_context)
+            
+            # Get the appropriate voice for this agent
+            voice_id = get_voice_id_for_agent(agent_config)
+            
+            # Create call with template agent and dynamic variables
+            response = self.client.call.create_phone_call(
+                retell_agent_id=self.master_agent_id,
+                from_number=agent_config.get("outbound_phone"),
+                to_number=lead_data["phone"],
+                retell_llm_dynamic_variables=dynamic_vars,
+                metadata={
+                    "agent_id": agent_config.get("id"),
+                    "agent_name": agent_config.get("name"),
+                    "lead_id": lead_data.get("id"),
+                    "lead_name": lead_data.get("name"),
+                    "call_type": call_context.get("type", "outbound") if call_context else "outbound",
+                    "created_at": datetime.utcnow().isoformat(),
+                    "source": "admin_panel_template"
+                }
+            )
+            
+            logger.info(f"Successfully created template call: {response.call_id}")
+            return response.call_id
+            
+        except Exception as e:
+            logger.error(f"Error creating template call: {e}")
+            if hasattr(e, 'response'):
+                logger.error(f"Response details: {getattr(e.response, 'text', 'No response text')}")
+            return None
+    
+    async def create_concurrent_calls(self, agent_config: dict, leads: List[dict], call_context: dict = None) -> List[str]:
+        """Create multiple concurrent calls using the template approach"""
+        if not self.enabled:
+            return [f"mock_call_{i}" for i in range(len(leads))]
+        
+        if not leads:
+            return []
+        
+        # Limit concurrent calls to prevent rate limiting
+        max_concurrent = 50  # Adjust based on your Retell plan
+        call_batches = [leads[i:i + max_concurrent] for i in range(0, len(leads), max_concurrent)]
+        
+        all_call_ids = []
+        
+        for batch in call_batches:
+            # Create tasks for concurrent execution
+            tasks = []
+            for lead in batch:
+                task = asyncio.create_task(
+                    self._create_template_call_async(agent_config, lead, call_context)
+                )
+                tasks.append(task)
+            
+            # Execute batch concurrently
+            batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Filter out exceptions and add successful call IDs
+            for result in batch_results:
+                if isinstance(result, str) and not isinstance(result, Exception):
+                    all_call_ids.append(result)
+                elif isinstance(result, Exception):
+                    logger.error(f"Failed to create call in batch: {result}")
+        
+        return all_call_ids
+    
+    async def _create_template_call_async(self, agent_config: dict, lead_data: dict, call_context: dict = None) -> Optional[str]:
+        """Async wrapper for template call creation"""
+        return self.create_template_call(agent_config, lead_data, call_context)
     
     def create_phone_call(self, call_data: Dict[str, Any]) -> Optional[str]:
         """Create a phone call and return the call ID"""
@@ -261,27 +285,59 @@ class RetellService:
             logger.error(f"Error listing calls via SDK: {e}")
             return []
     
-    def create_phone_call_for_lead(self, lead_id: str, agent_retell_id: str, 
+    def create_phone_call_for_lead(self, lead_id: str, agent_id: str, 
                                   from_number: str, to_number: str, 
                                   lead_name: str, variables: Optional[Dict] = None) -> Optional[str]:
-        """Create a phone call for a specific lead with our standard metadata"""
+        """Create a phone call for a specific lead using template approach"""
         
-        call_data = {
-            "from_number": from_number,
-            "to_number": to_number,
-            "retell_agent_id": agent_retell_id,
-            "metadata": {
-                "lead_id": lead_id,
-                "created_at": datetime.utcnow().isoformat(),
-                "source": "admin_panel"
-            },
-            "variables": {
-                "lead_name": lead_name,
-                **(variables or {})
+        # Get agent configuration from database
+        from app.db.session import SessionLocal
+        from app.models.agent import Agent
+        
+        db = SessionLocal()
+        try:
+            agent = db.query(Agent).filter(Agent.id == agent_id).first()
+            if not agent:
+                logger.error(f"Agent {agent_id} not found")
+                return None
+            
+            # Convert agent to dict format
+            agent_config = {
+                "id": str(agent.id),
+                "name": agent.name,
+                "prompt": agent.prompt,
+                "welcome_message": agent.welcome_message,
+                "voice_id": str(agent.voice_id) if agent.voice_id else None,
+                "functions": agent.functions or [],
+                "variables": agent.variables or {},
+                "outbound_phone": from_number,
+                "business_hours_start": str(agent.business_hours_start) if agent.business_hours_start else None,
+                "business_hours_end": str(agent.business_hours_end) if agent.business_hours_end else None,
+                "timezone": agent.timezone,
+                "max_call_duration_minutes": agent.max_call_duration_minutes
             }
-        }
-        
-        return self.create_phone_call(call_data)
+            
+            # Add custom variables
+            if variables:
+                agent_config["variables"].update(variables)
+            
+            # Lead data
+            lead_data = {
+                "id": lead_id,
+                "name": lead_name,
+                "phone": to_number
+            }
+            
+            # Call context
+            call_context = {
+                "type": "outbound",
+                "source": "admin_panel"
+            }
+            
+            return self.create_template_call(agent_config, lead_data, call_context)
+            
+        finally:
+            db.close()
     
     def verify_webhook_signature(self, payload: str, signature: str) -> bool:
         """Verify webhook signature from Retell"""

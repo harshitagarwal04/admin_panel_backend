@@ -51,7 +51,7 @@ async def create_agent(
             detail="Agent limit reached"
         )
     
-    # Create agent in Retell first
+    # In template-based mode, get master agent ID for reference
     retell_data = {
         "name": agent_data.name,
         "prompt": agent_data.prompt,
@@ -60,11 +60,7 @@ async def create_agent(
     }
     
     retell_agent_id = retell_service.create_agent(retell_data)
-    if not retell_agent_id:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create agent in Retell"
-        )
+    # Note: This now returns master template agent ID, not individual agent ID
     
     # Create agent in database
     try:
@@ -216,20 +212,9 @@ async def update_agent(
     
     agent.updated_by = current_user.id
     
-    # Update in Retell if relevant fields changed
-    if any(field in update_data for field in ['name', 'prompt', 'welcome_message', 'voice_id']):
-        retell_data = {
-            "name": agent.name,
-            "prompt": agent.prompt,
-            "welcome_message": agent.welcome_message,
-            "voice_id": str(agent.voice_id) if agent.voice_id else None
-        }
-        
-        if not retell_service.update_agent(agent.retell_agent_id, retell_data):
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to update agent in Retell"
-            )
+    # In template-based mode, agent updates are applied per-call via dynamic variables
+    # No need to update Retell agent directly
+    logger.info(f"Agent {agent_id} updated - changes will be applied per-call via template variables")
     
     db.commit()
     db.refresh(agent)
@@ -290,9 +275,8 @@ async def delete_agent(
     agent.is_deleted = True
     agent.updated_by = current_user.id
     
-    # Delete from Retell
-    if agent.retell_agent_id:
-        retell_service.delete_agent(agent.retell_agent_id)
+    # In template-based mode, no individual agents to delete from Retell
+    logger.info(f"Agent {agent_id} soft deleted from database")
     
     db.commit()
     
