@@ -97,11 +97,31 @@ class RetellService:
             if "name" in agent_data:
                 update_kwargs["agent_name"] = agent_data["name"]
             if "voice_id" in agent_data:
-                update_kwargs["voice_id"] = agent_data["voice_id"]
+                voice_id = agent_data["voice_id"]
+                # Resolve voice_id if it's a UUID from our database
+                if voice_id and len(voice_id) == 36 and voice_id.count('-') == 4:  # Looks like UUID
+                    from app.db.session import SessionLocal
+                    from app.models.voice import Voice
+                    
+                    db = SessionLocal()
+                    try:
+                        voice = db.query(Voice).filter(Voice.id == voice_id).first()
+                        if voice and voice.voice_provider_id:
+                            voice_id = voice.voice_provider_id
+                            logger.info(f"Mapped voice UUID {agent_data['voice_id']} to provider ID {voice_id}")
+                        else:
+                            logger.warning(f"Voice UUID {agent_data['voice_id']} not found, using default")
+                            voice_id = "11labs-Adrian"
+                    finally:
+                        db.close()
+                
+                update_kwargs["voice_id"] = voice_id
             if "voice_temperature" in agent_data:
                 update_kwargs["voice_temperature"] = agent_data["voice_temperature"]
             if "voice_speed" in agent_data:
                 update_kwargs["voice_speed"] = agent_data["voice_speed"]
+            
+            logger.info(f"Updating agent {retell_agent_id} with kwargs: {update_kwargs}")
             
             self.client.agent.update(
                 agent_id=retell_agent_id,
@@ -112,6 +132,11 @@ class RetellService:
             
         except Exception as e:
             logger.error(f"Error updating agent via SDK: {e}")
+            # Log more details about the error
+            if hasattr(e, 'response'):
+                logger.error(f"Response details: {getattr(e.response, 'text', 'No response text')}")
+            if hasattr(e, 'status_code'):
+                logger.error(f"Status code: {e.status_code}")
             return False
     
     def delete_agent(self, retell_agent_id: str) -> bool:

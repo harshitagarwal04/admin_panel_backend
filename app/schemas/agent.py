@@ -14,7 +14,7 @@ class AgentCreate(BaseModel):
     inbound_phone: Optional[str] = None
     outbound_phone: Optional[str] = None
     max_attempts: Optional[int] = Field(3, ge=1, le=10)
-    retry_delay_minutes: Optional[int] = Field(30, ge=15, le=480)
+    retry_delay_minutes: Optional[int] = Field(30, ge=15, le=720)
     business_hours_start: Optional[time] = None
     business_hours_end: Optional[time] = None
     timezone: Optional[str] = "UTC"
@@ -32,7 +32,7 @@ class AgentUpdate(BaseModel):
     inbound_phone: Optional[str] = None
     outbound_phone: Optional[str] = None
     max_attempts: Optional[int] = Field(None, ge=1, le=10)
-    retry_delay_minutes: Optional[int] = Field(None, ge=15, le=480)
+    retry_delay_minutes: Optional[int] = Field(None, ge=15, le=720)
     business_hours_start: Optional[time] = None
     business_hours_end: Optional[time] = None
     timezone: Optional[str] = None
