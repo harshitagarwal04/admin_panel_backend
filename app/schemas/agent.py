@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
-from datetime import time
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, List, Dict, Any, Union
+from datetime import time, datetime
 import uuid
 
 
@@ -40,14 +40,14 @@ class AgentUpdate(BaseModel):
 
 
 class AgentResponse(BaseModel):
-    id: str
-    company_id: str
+    id: Union[str, uuid.UUID]
+    company_id: Union[str, uuid.UUID]
     name: str
     status: str
     prompt: str
     variables: Dict[str, Any]
     welcome_message: Optional[str]
-    voice_id: Optional[str]
+    voice_id: Optional[Union[str, uuid.UUID]]
     functions: List[str]
     inbound_phone: Optional[str]
     outbound_phone: Optional[str]
@@ -58,8 +58,22 @@ class AgentResponse(BaseModel):
     timezone: str
     max_call_duration_minutes: int
     retell_agent_id: Optional[str]
-    created_at: str
-    updated_at: str
+    created_at: Union[str, datetime]
+    updated_at: Union[str, datetime]
+    
+    @field_validator('id', 'company_id', 'voice_id', mode='before')
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        if isinstance(v, uuid.UUID):
+            return str(v)
+        return v
+    
+    @field_validator('created_at', 'updated_at', mode='before')
+    @classmethod
+    def convert_datetime_to_str(cls, v):
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return v
     
     class Config:
         from_attributes = True
@@ -73,12 +87,19 @@ class AgentListResponse(BaseModel):
 
 
 class VoiceResponse(BaseModel):
-    id: str
+    id: Union[str, uuid.UUID]
     name: str
     language: str
     gender: str
     voice_provider_id: str
     is_active: bool
+    
+    @field_validator('id', mode='before')
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        if isinstance(v, uuid.UUID):
+            return str(v)
+        return v
     
     class Config:
         from_attributes = True

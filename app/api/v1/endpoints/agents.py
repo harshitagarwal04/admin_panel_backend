@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.db.deps import get_db, get_current_user
+from app.db.deps import get_db, get_current_user, get_user_company
 from app.schemas.agent import AgentCreate, AgentUpdate, AgentResponse, AgentListResponse, VoiceResponse
 from app.models.user import User
 from app.models.company import Company
@@ -9,8 +9,10 @@ from app.models.agent import Agent
 from app.models.voice import Voice
 from app.services.retell_service import retell_service
 import uuid
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def get_user_company(db: Session, user: User) -> Company:
@@ -34,6 +36,7 @@ async def create_agent(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    logger.info(f"Creating agent with data: {agent_data.dict()}")
     company = get_user_company(db, current_user)
     
     # Check agent limit
@@ -64,32 +67,52 @@ async def create_agent(
         )
     
     # Create agent in database
-    agent = Agent(
-        company_id=company.id,
-        name=agent_data.name,
-        prompt=agent_data.prompt,
-        variables=agent_data.variables or {},
-        welcome_message=agent_data.welcome_message,
-        voice_id=uuid.UUID(agent_data.voice_id) if agent_data.voice_id else None,
-        functions=agent_data.functions or [],
-        inbound_phone=agent_data.inbound_phone,
-        outbound_phone=agent_data.outbound_phone,
-        max_attempts=agent_data.max_attempts,
-        retry_delay_minutes=agent_data.retry_delay_minutes,
-        business_hours_start=agent_data.business_hours_start,
-        business_hours_end=agent_data.business_hours_end,
-        timezone=agent_data.timezone,
-        max_call_duration_minutes=agent_data.max_call_duration_minutes,
-        retell_agent_id=retell_agent_id,
-        created_by=current_user.id,
-        updated_by=current_user.id
-    )
-    
-    db.add(agent)
-    db.commit()
-    db.refresh(agent)
-    
-    return agent
+    try:
+        agent = Agent(
+            company_id=company.id,
+            name=agent_data.name,
+            prompt=agent_data.prompt,
+            variables=agent_data.variables or {},
+            welcome_message=agent_data.welcome_message,
+            voice_id=uuid.UUID(agent_data.voice_id) if agent_data.voice_id else None,
+            functions=agent_data.functions or [],
+            inbound_phone=agent_data.inbound_phone,
+            outbound_phone=agent_data.outbound_phone,
+            max_attempts=agent_data.max_attempts,
+            retry_delay_minutes=agent_data.retry_delay_minutes,
+            business_hours_start=agent_data.business_hours_start,
+            business_hours_end=agent_data.business_hours_end,
+            timezone=agent_data.timezone,
+            max_call_duration_minutes=agent_data.max_call_duration_minutes,
+            retell_agent_id=retell_agent_id,
+            created_by=current_user.id,
+            updated_by=current_user.id
+        )
+        
+        db.add(agent)
+        db.commit()
+        db.refresh(agent)
+        
+        logger.info(f"Agent created successfully: {agent.id}")
+        
+        # Debug: Check what we're returning
+        logger.debug(f"Returning agent with voice_id type: {type(agent.voice_id)}, value: {agent.voice_id}")
+        logger.debug(f"Agent dict: {agent.__dict__}")
+        
+        return agent
+    except Exception as e:
+        logger.error(f"Error creating agent: {str(e)}", exc_info=True)
+        db.rollback()
+        # If it's a foreign key error, provide a helpful message
+        if "foreign key constraint" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid reference in request. Please check voice_id exists. Error: {str(e)}"
+            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create agent: {str(e)}"
+        )
 
 
 @router.get("/", response_model=AgentListResponse)

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.core.security import verify_token
 from app.models.user import User
+from app.models.company import Company
 
 security = HTTPBearer()
 
@@ -37,3 +38,24 @@ def get_current_user(
         )
     
     return user
+
+
+def get_user_company(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Company:
+    """
+    Get user's company - middleware ensures this exists for business endpoints
+    """
+    company = db.query(Company).filter(
+        Company.admin_user_id == current_user.id,
+        Company.is_deleted == False
+    ).first()
+    
+    if not company:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Company not found"
+        )
+    
+    return company

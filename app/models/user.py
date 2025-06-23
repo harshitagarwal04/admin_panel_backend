@@ -7,8 +7,8 @@ class User(BaseModel):
     __tablename__ = "users"
     
     email = Column(String(255), unique=True, nullable=False, index=True)
-    name = Column(String(255), nullable=False)
-    phone = Column(String(50))
+    name = Column(String(255), nullable=True)  # Allow null for onboarding flow
+    phone = Column(String(50), nullable=True)
     google_id = Column(String(255), unique=True, nullable=False, index=True)
     
     # Relationships

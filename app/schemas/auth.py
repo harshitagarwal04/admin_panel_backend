@@ -6,6 +6,16 @@ class GoogleTokenRequest(BaseModel):
     token: str
 
 
+class TestLoginRequest(BaseModel):
+    email: EmailStr
+
+
+class UserProfileUpdate(BaseModel):
+    name: str
+    phone: Optional[str] = None
+    company_name: str
+
+
 class UserCreate(BaseModel):
     email: EmailStr
     name: str
@@ -16,8 +26,10 @@ class UserCreate(BaseModel):
 class UserResponse(BaseModel):
     id: str
     email: str
-    name: str
+    name: Optional[str]
     phone: Optional[str]
+    is_profile_complete: bool
+    has_company: bool
     
     class Config:
         from_attributes = True
