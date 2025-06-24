@@ -59,13 +59,40 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 ### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
+pip install email-validator  # Additional required dependency
 ```
 
 ### 4. Environment Configuration
+
+Create a `.env` file in the project root:
 ```bash
+# If .env.example exists:
 cp .env.example .env
-# Edit .env with your credentials
+
+# Or create a new .env file with minimal configuration:
+cat > .env << 'EOF'
+# Database
+DATABASE_URL=sqlite:///./voice_ai.db
+
+# Security
+SECRET_KEY=your-secret-key-here
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_DAYS=60
+
+# Google OAuth (placeholder values for development)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+REDIRECT_URI=http://localhost:3000/api/auth/callback
+
+# Retell AI (placeholder)
+RETELL_API_KEY=your-retell-api-key
+
+# Environment
+ENVIRONMENT=development
+EOF
 ```
+
+Edit the `.env` file with your actual credentials.
 
 ### 5. Database Setup
 ```bash
@@ -77,13 +104,30 @@ alembic upgrade head
 ```
 
 ### 6. Start Development Server
+
+**Option 1: Using Python directly**
 ```bash
 python main.py
 ```
 
-The API will be available at `http://localhost:8000`
-- API Documentation: `http://localhost:8000/docs`
-- Health Check: `http://localhost:8000/health`
+**Option 2: Using uvicorn directly**
+```bash
+uvicorn main:app --reload --host 127.0.0.1 --port 8080
+```
+
+**Option 3: Running in background**
+```bash
+# Start server in background
+nohup uvicorn main:app --host 127.0.0.1 --port 8080 > server.log 2>&1 &
+
+# To stop the background server later:
+pkill -f "uvicorn main:app"
+```
+
+The API will be available at:
+- Base URL: `http://localhost:8080` (or port 8000 if using python main.py)
+- API Documentation: `http://localhost:8080/docs`
+- Health Check: `http://localhost:8080/health`
 
 ## 🔧 Configuration
 
