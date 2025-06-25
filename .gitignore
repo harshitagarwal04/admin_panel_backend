@@ -87,4 +87,4 @@ service-account-key.json
 # Secrets and credentials
 *.pem
 *.key
-*.crt
+*.crt.env
