@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Voice AI Admin Panel - Deployment Script
-# Usage: ./deploy.sh [environment]
+# Voice AI Admin Panel - GCP Deployment Script (using Cloud Build)
+# Usage: ./deploy-gcp.sh [environment]
 
 set -e
 
@@ -10,14 +10,11 @@ PROJECT_ID=${GOOGLE_CLOUD_PROJECT:-"iconic-parsec-456210-h7"}
 REGION=${GOOGLE_CLOUD_REGION:-"us-central1"}
 SERVICE_NAME="voice-ai-admin-api"
 
-echo "🚀 Deploying Voice AI Admin Panel API to $ENVIRONMENT"
+echo "🚀 Deploying Voice AI Admin Panel API to $ENVIRONMENT using Google Cloud Build"
 
-# Build and push Docker image
-echo "📦 Building Docker image..."
-docker build -t gcr.io/$PROJECT_ID/$SERVICE_NAME:latest .
-
-echo "🔄 Pushing image to Container Registry..."
-docker push gcr.io/$PROJECT_ID/$SERVICE_NAME:latest
+# Submit build to Google Cloud Build
+echo "📦 Building Docker image with Cloud Build..."
+gcloud builds submit --tag gcr.io/$PROJECT_ID/$SERVICE_NAME:latest .
 
 # Deploy to Cloud Run
 echo "☁️ Deploying to Cloud Run..."

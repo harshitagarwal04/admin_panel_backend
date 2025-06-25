@@ -22,9 +22,9 @@ curl -X POST "http://localhost:8080/api/v1/leads/" \
   -H "Authorization: Bearer $API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "agent_id": "fe3e7b28-a9d5-4967-a78c-1e18bad870c4",
+    "agent_id": "53420311-13b0-44c5-93df-30f38985e7a0",
     "first_name": "John",
-    "phone_e164": "+14155552671",
+    "phone_e164": "+14155552670",
     "custom_fields": {
       "company": "Acme Corp",
       "position": "Manager",
@@ -38,7 +38,7 @@ curl -X POST "http://localhost:8080/api/v1/leads/" \
   -H "Authorization: Bearer $API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "agent_id": "fe3e7b28-a9d5-4967-a78c-1e18bad870c4",
+    "agent_id": "53420311-13b0-44c5-93df-30f38985e7a0",
     "first_name": "Jane",
     "phone_e164": "+14155552672"
   }'
@@ -138,7 +138,7 @@ curl -X GET "http://localhost:8080/api/v1/leads/?page=2&per_page=20" \
 **GET** `/leads/{lead_id}`
 
 ```bash
-curl -X GET "http://localhost:8080/api/v1/leads/123e4567-e89b-12d3-a456-426614174000" \
+curl -X GET "http://localhost:8080/api/v1/leads/dbc86e86-1d91-477f-aa2f-a1abd387eb6b" \
   -H "Authorization: Bearer $API_TOKEN"
 ```
 
@@ -247,7 +247,7 @@ curl -X POST "http://localhost:8080/api/v1/calls/schedule" \
   -H "Authorization: Bearer $API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "lead_id": "123e4567-e89b-12d3-a456-426614174000"
+    "lead_id": "dbc86e86-1d91-477f-aa2f-a1abd387eb6b"
   }'
 ```
 
