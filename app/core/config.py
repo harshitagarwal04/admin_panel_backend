@@ -34,8 +34,14 @@ class Settings(BaseSettings):
     PLIVO_AUTH_ID: str = os.getenv("PLIVO_AUTH_ID", "")
     PLIVO_AUTH_TOKEN: str = os.getenv("PLIVO_AUTH_TOKEN", "")
     
-    # CORS - Simple list
-    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080", "http://127.0.0.1:3000"]
+    # CORS - Allow production domain and localhost
+    BACKEND_CORS_ORIGINS: List[str] = [
+        "http://localhost:3000", 
+        "http://localhost:8080", 
+        "http://127.0.0.1:3000",
+        "https://admin.conversailabs.com",
+        "http://admin.conversailabs.com"
+    ]
 
     class Config:
         case_sensitive = True
